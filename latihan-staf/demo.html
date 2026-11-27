@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Latihan Staf — Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f0f4f8; color: #1f2328; }
+
+    /* ── NAV ── */
+    nav { background: #1e3a5f; color: #fff; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+    .nav-brand { font-size: 18px; font-weight: 700; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-btn { background: none; border: none; color: #a8c4e0; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .nav-btn.active, .nav-btn:hover { background: #2563eb; color: #fff; }
+    .nav-user { font-size: 13px; color: #a8c4e0; display: flex; align-items: center; gap: 10px; }
+    .btn-logout { background: #dc2626; border: none; color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+
+    /* ── PAGES ── */
+    .page { display: none; max-width: 1150px; margin: 0 auto; padding: 28px 20px; }
+    .page.active { display: block; }
+
+    /* ── LOGIN ── */
+    #page-login { max-width: 400px !important; display: flex; align-items: center; min-height: calc(100vh - 0px); padding: 40px 20px; }
+    #page-login.active { display: flex; }
+    .login-card { background: #fff; border-radius: 16px; padding: 40px; width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-logo .icon { font-size: 48px; }
+    .login-logo h1 { font-size: 22px; color: #1e3a5f; margin: 8px 0 4px; }
+    .login-logo p { font-size: 14px; color: #64748b; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .field input, .field select, .field textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; font-family: inherit; }
+    .field input:focus, .field select:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    .btn-primary { width: 100%; padding: 12px; background: #1e3a5f; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-primary:hover { background: #2563eb; }
+    .login-hint { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 14px; }
+
+    /* ── CARDS & GRID ── */
+    h1.page-title { font-size: 20px; color: #1e3a5f; margin-bottom: 4px; }
+    p.page-sub { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 2px 6px rgba(0,0,0,.07); border-left: 4px solid var(--c); }
+    .stat-card .s-icon { font-size: 22px; }
+    .stat-card .s-val { font-size: 28px; font-weight: 700; color: var(--c); margin: 4px 0 2px; }
+    .stat-card .s-label { font-size: 13px; color: #64748b; }
+
+    /* ── KPI PROGRESS CARD ── */
+    .kpi-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 24px; }
+    .kpi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .kpi-header h2 { font-size: 17px; color: #1e3a5f; }
+    .badge { padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+    .badge.capai { background: #dcfce7; color: #16a34a; }
+    .badge.belum { background: #fef3c7; color: #d97706; }
+    .badge.menunggu { background: #fef3c7; color: #d97706; }
+    .badge.diluluskan { background: #dcfce7; color: #16a34a; }
+    .badge.ditolak { background: #fee2e2; color: #dc2626; }
+    .badge.aktif { background: #dcfce7; color: #16a34a; }
+    .badge.nyahaktif { background: #f1f5f9; color: #94a3b8; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .metric-box { background: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; }
+    .metric-box .m-label { font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500; }
+    .metric-box .m-val { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+    .metric-box .m-val span { font-size: 14px; color: #94a3b8; font-weight: 400; }
+    .prog-bg { background: #e2e8f0; border-radius: 999px; height: 10px; overflow: hidden; }
+    .prog-bar { height: 10px; border-radius: 999px; transition: width .5s; }
+    .prog-pct { font-size: 12px; color: #94a3b8; text-align: right; margin-top: 3px; }
+
+    /* ── TABLES ── */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .section-header h2 { font-size: 16px; color: #1e3a5f; }
+    .table-wrap { background: #fff; border-radius: 10px; overflow: auto; box-shadow: 0 2px 6px rgba(0,0,0,.07); }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #f1f5f9; }
+    th { padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; }
+    tbody tr { border-bottom: 1px solid #f1f5f9; }
+    tbody tr:hover { background: #f8fafc; }
+    td { padding: 12px 14px; font-size: 14px; color: #374151; vertical-align: middle; }
+    .sub-text { font-size: 12px; color: #94a3b8; }
+
+    /* ── ACTION BUTTONS ── */
+    .btn-sm { padding: 5px 11px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid; }
+    .btn-lulus { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+    .btn-tolak { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+    .btn-add { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .btn-secondary { background: #f1f5f9; color: #475569; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    .btn-green { background: #16a34a; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    /* ── CHARTS ── */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-box { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,.07); }
+    .chart-box h3 { font-size: 14px; color: #374151; font-weight: 600; margin-bottom: 14px; }
+
+    /* ── FORM ── */
+    .form-card { background: #fff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,.08); max-width: 760px; }
+    .form-card h1 { font-size: 20px; color: #1e3a5f; margin-bottom: 8px; }
+    .info-box { background: #eff6ff; color: #1d4ed8; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 24px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 12px; }
+    .hint { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+    .prog-mini .pm-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .prog-mini .pm-val { font-size: 13px; font-weight: 600; }
+    .prog-mini .pm-tot { font-size: 12px; color: #94a3b8; }
+
+    /* ── YEAR FILTER ── */
+    .filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .filter-row select { padding: 7px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 14px; }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:640px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      .grid2 { grid-template-columns: 1fr; }
+      nav .nav-links { display: none; }
+    }
+
+    /* ── TOAST ── */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 14px; display: none; z-index: 999; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+    #toast.show { display: block; animation: fadeIn .3s; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ NAVBAR ══════════════ -->
+<nav id="navbar" style="display:none">
+  <div class="nav-brand" style="display:flex;align-items:center;gap:10px;">
+    <img src="logo psp.png" alt="Logo" style="height:36px;object-fit:contain;" />
+    <span>Latihan Staf</span>
+  </div>
+  <div class="nav-links" id="navLinks"></div>
+  <div class="nav-user">
+    <span id="navNama"></span>
+    <button class="btn-logout" onclick="doLogout()">Log Keluar</button>
+  </div>
+</nav>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="page-login" class="page active" style="max-width:100%;justify-content:center;min-height:100vh;">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="logo psp.png" alt="Logo Politeknik" style="height:80px;object-fit:contain;margin-bottom:8px;" />
+      <h1>Dashboard Latihan Staf</h1>
+      <p>Sistem Pengurusan KPI Latihan</p>
+    </div>
+    <div class="field">
+      <label>Log masuk sebagai:</label>
+      <select id="loginRole">
+        <option value="staf1">Ahmad Firdaus (Staf — KPI Capai ✅)</option>
+        <option value="staf2">Nurul Hana (Staf — KPI Belum Capai ⚠️)</option>
+        <option value="staf3">Mohd Hafiz (Staf — KPI Dalam Proses 🔄)</option>
+        <option value="admin">Pn. Wahidah (Admin HR)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Kata Laluan (Demo)</label>
+      <input type="password" value="demo123" readonly style="background:#f8fafc;color:#94a3b8;" />
+    </div>
+    <button class="btn-primary" onclick="doLogin()">🔐 Log Masuk</button>
+    <p class="login-hint">* Ini adalah demo. Pilih peranan di atas untuk lihat paparan berbeza.</p>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD STAF ══════════════ -->
+<div id="page-dashboard" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1 class="page-title" id="dashGreet">Selamat Datang!</h1>
+      <p class="page-sub" id="dashSub"></p>
+    </div>
+    <div class="filter-row">
+      <label style="font-size:13px;color:#64748b;">Tahun:</label>
+      <select id="dashTahun" onchange="renderDashboard()">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPI Progress -->
+  <div class="kpi-card">
+    <div class="kpi-header">
+      <h2>📊 Status KPI Latihan</h2>
+      <span class="badge" id="kpiBadge"></span>
+    </div>
+    <div class="metric-grid">
+      <div class="metric-box">
+        <div class="m-label">⏱️ Jumlah Jam Latihan</div>
+        <div class="m-val" id="mJam">— <span>/ 40 jam</span></div>
+        <div class="prog-bg"><div class="prog-bar" id="pbJam"></div></div>
+        <div class="prog-pct" id="pctJam"></div>
+      </div>
+      <div class="metric-box">
+        <div class="m-label">📅 Jumlah Hari Berkursus</div>
+        <div class="m-val" id="mHari">— <span>/ 5 hari</span></div>
+        <div class="prog-bg"><div class="prog-bar" id="pbHari"></div></div>
+        <div class="prog-pct" id="pctHari"></div>
+      </div>
+      <div class="metric-box">
+        <div class="m-label">🎓 Bilangan Kursus Diluluskan</div>
+        <div class="m-val" id="mKursus">— <span>kursus</span></div>
+        <div style="font-size:13px;color:#6b7280;margin-top:12px;">Hanya kursus <strong>Diluluskan</strong> dikira dalam KPI</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jadual Kursus -->
+  <div class="section-header">
+    <h2>📋 Rekod Kursus Saya</h2>
+    <button class="btn-add" onclick="showPage('tambah')">+ Tambah Kursus</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Nama Kursus</th><th>Penganjur</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Jam</th><th>Hari</th><th>Status</th>
+      </tr></thead>
+      <tbody id="tbodyKursus"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ TAMBAH KURSUS ══════════════ -->
+<div id="page-tambah" class="page">
+  <div class="form-card">
+    <h1>➕ Tambah Rekod Kursus</h1>
+    <div class="info-box" style="margin-top:8px;">
+      Rekod kursus akan dihantar kepada Admin HR untuk kelulusan sebelum dikira dalam KPI anda.
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Nama Kursus *</label><input id="fNama" placeholder="cth: Kursus Kepimpinan Strategik" /></div>
+      <div class="field"><label>Penganjur</label><input id="fPenganjur" placeholder="cth: INTAN, MAMPU" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Tarikh Mula *</label><input type="date" id="fMula" onchange="autoKiraHari()" /></div>
+      <div class="field"><label>Tarikh Tamat *</label><input type="date" id="fTamat" onchange="autoKiraHari()" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>Jumlah Jam *</label>
+        <input type="number" id="fJam" placeholder="cth: 8" min="0.5" step="0.5" />
+      </div>
+      <div class="field">
+        <label>Jumlah Hari *</label>
+        <input type="number" id="fHari" placeholder="Auto-dikira" min="1" />
+        <div class="hint">Auto-dikira berdasarkan tarikh. Boleh ubah secara manual.</div>
+      </div>
+    </div>
+    <div class="field"><label>Lokasi</label><input id="fLokasi" placeholder="cth: Kuala Lumpur / Online" /></div>
+    <div class="field"><label>Catatan</label><textarea id="fCatatan" rows="3" placeholder="Maklumat tambahan..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="showPage('dashboard')">Batal</button>
+      <button class="btn-green" onclick="submitKursus()">📤 Hantar untuk Kelulusan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADMIN DASHBOARD ══════════════ -->
+<div id="page-admin" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <h1 class="page-title">📊 Dashboard Admin — KPI Latihan Staf</h1>
+    <div class="filter-row">
+      <select id="adminTahun" onchange="renderAdmin()">
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+      </select>
+      <select id="adminJabatan" onchange="renderAdmin()">
+        <option value="">Semua Program</option>
+        <option value="DPM">DPM</option>
+        <option value="DAC">DAC</option>
+        <option value="DIF">DIF</option>
+        <option value="DLS">DLS</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="stat-grid" id="adminStats"></div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-box">
+      <h3>Pecahan KPI Keseluruhan</h3>
+      <canvas id="chartPie" height="200"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Capai KPI Mengikut Jabatan</h3>
+      <canvas id="chartBar" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Jadual semua staf -->
+  <div style="background:#fff;border-radius:10px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,.07);">
+    <h2 style="font-size:16px;color:#1e3a5f;margin-bottom:16px;">📋 Senarai Staf & Status KPI 2026</h2>
+    <div class="table-wrap" style="box-shadow:none;">
+      <table>
+        <thead><tr>
+          <th>No. Pekerja</th><th>Nama</th><th>Jabatan</th><th>Jam Latihan</th><th>Hari Berkursus</th><th>Status KPI</th>
+        </tr></thead>
+        <tbody id="tbodyAdmin"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SEMAK KURSUS (ADMIN) ══════════════ -->
+<div id="page-semak" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <h1 class="page-title">📋 Semak & Luluskan Kursus</h1>
+    <div class="filter-row">
+      <select id="semakStatus" onchange="renderSemak()">
+        <option value="menunggu">Menunggu Kelulusan</option>
+        <option value="diluluskan">Diluluskan</option>
+        <option value="ditolak">Ditolak</option>
+        <option value="">Semua</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Staf</th><th>Jabatan</th><th>Nama Kursus</th><th>Tarikh</th><th>Jam</th><th>Hari</th><th>Status</th><th>Tindakan</th>
+      </tr></thead>
+      <tbody id="tbodySemak"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ URUS STAF (ADMIN) ══════════════ -->
+<div id="page-staf" class="page">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <h1 class="page-title">👥 Urus Staf</h1>
+    <button class="btn-add" onclick="toggleFormStaf()">+ Daftar Staf Baru</button>
+  </div>
+
+  <div id="formStaf" style="display:none;" class="form-card" style="margin-bottom:20px;">
+    <h3 style="color:#1e3a5f;margin-bottom:16px;">Daftar Staf Baru</h3>
+    <div class="grid2">
+      <div class="field"><label>No. Pekerja *</label><input id="sNoPekerja" placeholder="EMP006" /></div>
+      <div class="field"><label>Nama Penuh *</label><input id="sNama" placeholder="Nama Staf" /></div>
+      <div class="field"><label>Emel *</label><input id="sEmel" type="email" placeholder="emel@syarikat.com" /></div>
+      <div class="field"><label>Kata Laluan Awal *</label><input id="sPass" type="password" placeholder="Min. 6 aksara" /></div>
+      <div class="field"><label>Jabatan *</label>
+        <select id="sJabatan">
+          <option>DPM</option>
+          <option>DAC</option>
+          <option>DIF</option>
+          <option>DLS</option>
+        </select>
+      </div>
+      <div class="field"><label>Tarikh Masuk</label><input id="sTarikh" type="date" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="toggleFormStaf()">Batal</button>
+      <button class="btn-green" onclick="submitStaf()">✅ Daftar Staf</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>No. Pekerja</th><th>Nama</th><th>Jabatan</th><th>Tarikh Masuk</th><th>Status</th><th>Tindakan</th>
+      </tr></thead>
+      <tbody id="tbodyStaf"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ TOAST ══════════════ -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// DATA DUMMY
+// ═══════════════════════════════════════
+const STAF = [
+  { id:'s1', no_pekerja:'EMP001', nama:'Ahmad Firdaus Bin Zulkifli', jabatan:'DPM', emel:'ahmad@syarikat.com', tarikh_masuk:'2021-03-15', aktif:true },
+  { id:'s2', no_pekerja:'EMP002', nama:'Nurul Hana Binti Rashid',    jabatan:'DAC', emel:'nurul@syarikat.com',  tarikh_masuk:'2020-07-01', aktif:true },
+  { id:'s3', no_pekerja:'EMP003', nama:'Mohd Hafiz Bin Ibrahim',     jabatan:'DIF', emel:'hafiz@syarikat.com',  tarikh_masuk:'2022-01-10', aktif:true },
+  { id:'s4', no_pekerja:'EMP004', nama:'Siti Rohani Binti Kamal',    jabatan:'DLS', emel:'siti@syarikat.com',   tarikh_masuk:'2019-09-20', aktif:true },
+  { id:'s5', no_pekerja:'EMP005', nama:'Faizal Bin Mustafa',         jabatan:'DPM', emel:'faizal@syarikat.com', tarikh_masuk:'2023-04-01', aktif:false },
+];
+
+const KURSUS_DATA = [
+  // Ahmad Firdaus (s1) — KPI CAPAI (45 jam, 6 hari)
+  { id:'k1', user_id:'s1', nama_kursus:'Kursus Keselamatan Siber',       penganjur:'CyberSecurity Malaysia', tarikh_mula:'2026-01-13', tarikh_tamat:'2026-01-15', jumlah_jam:16, jumlah_hari:3, status:'diluluskan' },
+  { id:'k2', user_id:'s1', nama_kursus:'Pembangunan Aplikasi Web',        penganjur:'MDEC',                  tarikh_mula:'2026-02-24', tarikh_tamat:'2026-02-25', jumlah_jam:14, jumlah_hari:2, status:'diluluskan' },
+  { id:'k3', user_id:'s1', nama_kursus:'Kepimpinan & Pengurusan Pasukan', penganjur:'INTAN',                 tarikh_mula:'2026-04-07', tarikh_tamat:'2026-04-07', jumlah_jam:8,  jumlah_hari:1, status:'diluluskan' },
+  { id:'k4', user_id:'s1', nama_kursus:'Latihan Microsoft Azure',         penganjur:'Microsoft Malaysia',    tarikh_mula:'2026-07-14', tarikh_tamat:'2026-07-14', jumlah_jam:7,  jumlah_hari:1, status:'menunggu'   },
+
+  // Nurul Hana (s2) — BELUM CAPAI (12 jam, 2 hari)
+  { id:'k5', user_id:'s2', nama_kursus:'Pengurusan Sumber Manusia Moden', penganjur:'MAMPU',    tarikh_mula:'2026-03-10', tarikh_tamat:'2026-03-11', jumlah_jam:12, jumlah_hari:2, status:'diluluskan' },
+  { id:'k6', user_id:'s2', nama_kursus:'Komunikasi Berkesan',             penganjur:'INTAN',    tarikh_mula:'2026-09-05', tarikh_tamat:'2026-09-05', jumlah_jam:7,  jumlah_hari:1, status:'menunggu'   },
+
+  // Mohd Hafiz (s3) — DALAM PROSES (28 jam, 4 hari)
+  { id:'k7', user_id:'s3', nama_kursus:'Perakaunan & Audit Dalaman',      penganjur:'MIA',      tarikh_mula:'2026-02-03', tarikh_tamat:'2026-02-04', jumlah_jam:14, jumlah_hari:2, status:'diluluskan' },
+  { id:'k8', user_id:'s3', nama_kursus:'Pengurusan Bajet 2027',           penganjur:'Perbendaharaan', tarikh_mula:'2026-05-19', tarikh_tamat:'2026-05-20', jumlah_jam:14, jumlah_hari:2, status:'diluluskan' },
+  { id:'k9', user_id:'s3', nama_kursus:'Excel Lanjutan untuk Kewangan',   penganjur:'Percetakan Nasional', tarikh_mula:'2026-08-25', tarikh_tamat:'2026-08-25', jumlah_jam:7, jumlah_hari:1, status:'menunggu' },
+
+  // Siti Rohani (s4) — CAPAI (41 jam, 5 hari)
+  { id:'k10', user_id:'s4', nama_kursus:'Pengurusan Logistik & Rantaian Bekalan', penganjur:'MITI', tarikh_mula:'2026-01-20', tarikh_tamat:'2026-01-21', jumlah_jam:14, jumlah_hari:2, status:'diluluskan' },
+  { id:'k11', user_id:'s4', nama_kursus:'Keselamatan & Kesihatan Pekerjaan',       penganjur:'DOSH', tarikh_mula:'2026-03-25', tarikh_tamat:'2026-03-26', jumlah_jam:14, jumlah_hari:2, status:'diluluskan' },
+  { id:'k12', user_id:'s4', nama_kursus:'Produktiviti & Inovasi',                  penganjur:'MPC',  tarikh_mula:'2026-06-09', tarikh_tamat:'2026-06-09', jumlah_jam:7,  jumlah_hari:1, status:'diluluskan' },
+  { id:'k13', user_id:'s4', nama_kursus:'Latihan Pembuatan Keputusan',             penganjur:'INTAN',tarikh_mula:'2026-09-15', tarikh_tamat:'2026-09-15', jumlah_jam:6,  jumlah_hari:1, status:'menunggu'   },
+];
+
+const MIN_JAM = 40, MIN_HARI = 5;
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let currentUser = null;
+let currentRole = null;
+let kursusData = JSON.parse(JSON.stringify(KURSUS_DATA));
+let stafData = JSON.parse(JSON.stringify(STAF));
+let chartPie = null, chartBar = null;
+
+const ROLES = {
+  staf1: { ...STAF[0], role:'staf' },
+  staf2: { ...STAF[1], role:'staf' },
+  staf3: { ...STAF[2], role:'staf' },
+  admin: { no_pekerja:'ADM001', nama:'Pn. Wahidah Binti Padeli', jabatan:'Sumber Manusia', role:'admin' },
+};
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('ms-MY', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function kpiStaf(userId) {
+  const kursus = kursusData.filter(k => k.user_id === userId && k.status === 'diluluskan');
+  const jam = kursus.reduce((s,k) => s + k.jumlah_jam, 0);
+  const hari = kursus.reduce((s,k) => s + k.jumlah_hari, 0);
+  return { jam, hari, bil: kursus.length };
+}
+
+function progBar(el, pct, capai) {
+  el.style.width = pct + '%';
+  el.style.backgroundColor = capai ? '#16a34a' : '#3b82f6';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === name);
+  });
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'admin') renderAdmin();
+  if (name === 'semak') renderSemak();
+  if (name === 'staf') renderStaf();
+}
+
+// ═══════════════════════════════════════
+// LOGIN / LOGOUT
+// ═══════════════════════════════════════
+function doLogin() {
+  const sel = document.getElementById('loginRole').value;
+  currentUser = ROLES[sel];
+  currentRole = currentUser.role;
+
+  document.getElementById('navbar').style.display = 'flex';
+  document.getElementById('navNama').textContent = '👤 ' + currentUser.nama;
+
+  const links = document.getElementById('navLinks');
+  links.innerHTML = '';
+  if (currentRole === 'staf') {
+    [['dashboard','🏠 Dashboard'],['tambah','➕ Tambah Kursus']].forEach(([p,l]) => {
+      links.innerHTML += `<button class="nav-btn" data-page="${p}" onclick="showPage('${p}')">${l}</button>`;
+    });
+    showPage('dashboard');
+  } else {
+    [['admin','📊 Dashboard'],['semak','📋 Semak Kursus'],['staf','👥 Urus Staf']].forEach(([p,l]) => {
+      links.innerHTML += `<button class="nav-btn" data-page="${p}" onclick="showPage('${p}')">${l}</button>`;
+    });
+    showPage('admin');
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('navbar').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-login').classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD STAF
+// ═══════════════════════════════════════
+function renderDashboard() {
+  const u = currentUser;
+  document.getElementById('dashGreet').textContent = 'Selamat Datang, ' + u.nama + ' 👋';
+  document.getElementById('dashSub').textContent = u.jabatan + ' · No. Pekerja: ' + u.no_pekerja;
+
+  const { jam, hari, bil } = kpiStaf(u.id);
+  const pJam = Math.min((jam / MIN_JAM) * 100, 100);
+  const pHari = Math.min((hari / MIN_HARI) * 100, 100);
+  const capai = jam >= MIN_JAM;
+
+  document.getElementById('mJam').innerHTML = `<span style="color:${jam>=MIN_JAM?'#16a34a':'#dc2626'};font-size:28px;font-weight:700">${jam.toFixed(1)}</span> <span style="font-size:14px;color:#94a3b8">/ ${MIN_JAM} jam</span>`;
+  document.getElementById('mHari').innerHTML = `<span style="color:${hari>=MIN_HARI?'#16a34a':'#dc2626'};font-size:28px;font-weight:700">${hari}</span> <span style="font-size:14px;color:#94a3b8">/ ${MIN_HARI} hari</span>`;
+  document.getElementById('mKursus').innerHTML = `<span style="font-size:28px;font-weight:700;color:#1e3a5f">${bil}</span> <span style="font-size:14px;color:#94a3b8">kursus</span>`;
+
+  progBar(document.getElementById('pbJam'), pJam, jam >= MIN_JAM);
+  progBar(document.getElementById('pbHari'), pHari, hari >= MIN_HARI);
+  document.getElementById('pctJam').textContent = pJam.toFixed(1) + '%';
+  document.getElementById('pctHari').textContent = pHari.toFixed(1) + '%';
+
+  const badge = document.getElementById('kpiBadge');
+  badge.textContent = capai ? '✅ KPI Capai' : '⚠️ Belum Capai KPI';
+  badge.className = 'badge ' + (capai ? 'capai' : 'belum');
+
+  const myKursus = kursusData.filter(k => k.user_id === u.id);
+  const tbody = document.getElementById('tbodyKursus');
+  tbody.innerHTML = myKursus.length ? myKursus.map(k => `
+    <tr>
+      <td><strong>${k.nama_kursus}</strong></td>
+      <td>${k.penganjur||'-'}</td>
+      <td>${formatDate(k.tarikh_mula)}</td>
+      <td>${formatDate(k.tarikh_tamat)}</td>
+      <td>${k.jumlah_jam} jam</td>
+      <td>${k.jumlah_hari} hari</td>
+      <td><span class="badge ${k.status}">${k.status==='diluluskan'?'Diluluskan':k.status==='ditolak'?'Ditolak':'Menunggu'}</span></td>
+    </tr>`).join('')
+    : `<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Tiada rekod kursus lagi.</td></tr>`;
+}
+
+// ═══════════════════════════════════════
+// TAMBAH KURSUS
+// ═══════════════════════════════════════
+function autoKiraHari() {
+  const m = document.getElementById('fMula').value;
+  const t = document.getElementById('fTamat').value;
+  if (m && t) {
+    const diff = Math.round((new Date(t) - new Date(m)) / 86400000) + 1;
+    if (diff > 0) document.getElementById('fHari').value = diff;
+  }
+}
+
+function submitKursus() {
+  const nama = document.getElementById('fNama').value.trim();
+  const mula = document.getElementById('fMula').value;
+  const tamat = document.getElementById('fTamat').value;
+  const jam = parseFloat(document.getElementById('fJam').value);
+  const hari = parseInt(document.getElementById('fHari').value);
+
+  if (!nama || !mula || !tamat || !jam || !hari) {
+    showToast('⚠️ Sila isi semua medan wajib.');
+    return;
+  }
+  if (new Date(tamat) < new Date(mula)) {
+    showToast('⚠️ Tarikh tamat tidak boleh lebih awal dari tarikh mula.');
+    return;
+  }
+
+  kursusData.push({
+    id: 'k' + Date.now(),
+    user_id: currentUser.id,
+    nama_kursus: nama,
+    penganjur: document.getElementById('fPenganjur').value || null,
+    tarikh_mula: mula,
+    tarikh_tamat: tamat,
+    jumlah_jam: jam,
+    jumlah_hari: hari,
+    status: 'menunggu',
+  });
+
+  ['fNama','fPenganjur','fMula','fTamat','fJam','fHari','fLokasi','fCatatan'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+
+  showToast('✅ Rekod kursus berjaya dihantar untuk kelulusan!');
+  showPage('dashboard');
+}
+
+// ═══════════════════════════════════════
+// ADMIN DASHBOARD
+// ═══════════════════════════════════════
+function renderAdmin() {
+  const allStaf = stafData.filter(s => s.aktif);
+  const kpiAll = allStaf.map(s => ({ ...s, ...kpiStaf(s.id) }));
+  const capai = kpiAll.filter(s => s.jam >= MIN_JAM).length;
+  const belum = kpiAll.length - capai;
+  const pJam = kpiAll.reduce((a,s) => a + s.jam, 0) / (kpiAll.length || 1);
+  const pHari = kpiAll.reduce((a,s) => a + s.hari, 0) / (kpiAll.length || 1);
+
+  document.getElementById('adminStats').innerHTML = [
+    ['👥', kpiAll.length, 'Jumlah Staf', '#2563eb'],
+    ['✅', capai, 'Capai KPI', '#16a34a'],
+    ['⚠️', belum, 'Belum Capai KPI', '#dc2626'],
+    ['📈', Math.round(capai/kpiAll.length*100)+'%', '% Capai KPI', '#7c3aed'],
+    ['⏱️', pJam.toFixed(1)+' jam', 'Purata Jam', '#0891b2'],
+    ['📅', pHari.toFixed(1)+' hari', 'Purata Hari', '#d97706'],
+  ].map(([ic,v,l,c]) =>
+    `<div class="stat-card" style="--c:${c}"><div class="s-icon">${ic}</div><div class="s-val">${v}</div><div class="s-label">${l}</div></div>`
+  ).join('');
+
+  // Pie chart
+  if (chartPie) chartPie.destroy();
+  chartPie = new Chart(document.getElementById('chartPie'), {
+    type: 'pie',
+    data: {
+      labels: ['Capai KPI', 'Belum Capai'],
+      datasets: [{ data: [capai, belum], backgroundColor: ['#16a34a','#dc2626'], borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+
+  // Bar chart
+  const jabatan = ['DPM','DAC','DIF','DLS'];
+  const barCapai = jabatan.map(j => kpiAll.filter(s => s.jabatan===j && s.jam>=MIN_JAM).length);
+  const barBelum = jabatan.map(j => kpiAll.filter(s => s.jabatan===j && s.jam<MIN_JAM).length);
+  if (chartBar) chartBar.destroy();
+  chartBar = new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: jabatan.map(j => j.substring(0,10)+'..'),
+      datasets: [
+        { label:'Capai', data: barCapai, backgroundColor:'#16a34a', stack:'a' },
+        { label:'Belum Capai', data: barBelum, backgroundColor:'#fca5a5', stack:'a' },
+      ]
+    },
+    options: { plugins:{ legend:{position:'bottom'} }, scales:{ x:{stacked:true}, y:{stacked:true,ticks:{stepSize:1}} } }
+  });
+
+  // Jadual staf
+  document.getElementById('tbodyAdmin').innerHTML = kpiAll.map(s => {
+    const pJamS = Math.min((s.jam/MIN_JAM)*100,100);
+    const pHariS = Math.min((s.hari/MIN_HARI)*100,100);
+    const c = s.jam >= MIN_JAM;
+    return `<tr>
+      <td>${s.no_pekerja}</td>
+      <td>${s.nama}</td>
+      <td>${s.jabatan}</td>
+      <td>
+        <div style="font-weight:600;font-size:13px;color:${s.jam>=MIN_JAM?'#16a34a':'#dc2626'}">${s.jam} <span style="color:#94a3b8;font-weight:400">/ ${MIN_JAM} jam</span></div>
+        <div class="prog-bg" style="margin-top:4px;height:6px"><div class="prog-bar" style="width:${pJamS}%;height:6px;background:${s.jam>=MIN_JAM?'#16a34a':'#3b82f6'}"></div></div>
+      </td>
+      <td>
+        <div style="font-weight:600;font-size:13px;color:${s.hari>=MIN_HARI?'#16a34a':'#dc2626'}">${s.hari} <span style="color:#94a3b8;font-weight:400">/ ${MIN_HARI} hari</span></div>
+        <div class="prog-bg" style="margin-top:4px;height:6px"><div class="prog-bar" style="width:${pHariS}%;height:6px;background:${s.hari>=MIN_HARI?'#16a34a':'#f59e0b'}"></div></div>
+      </td>
+      <td><span class="badge ${c?'capai':'belum'}">${c?'✅ Capai':'⚠️ Belum Capai'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// SEMAK KURSUS (ADMIN)
+// ═══════════════════════════════════════
+function renderSemak() {
+  const filter = document.getElementById('semakStatus').value;
+  const list = filter ? kursusData.filter(k => k.status === filter) : kursusData;
+
+  document.getElementById('tbodySemak').innerHTML = list.length ? list.map(k => {
+    const staf = stafData.find(s => s.id === k.user_id) || {};
+    return `<tr>
+      <td><strong>${staf.nama||'-'}</strong><br><span class="sub-text">${staf.no_pekerja||''}</span></td>
+      <td>${staf.jabatan||'-'}</td>
+      <td><strong>${k.nama_kursus}</strong>${k.penganjur?`<br><span class="sub-text">${k.penganjur}</span>`:''}</td>
+      <td>${formatDate(k.tarikh_mula)}<br><span class="sub-text">${formatDate(k.tarikh_tamat)}</span></td>
+      <td>${k.jumlah_jam}j</td>
+      <td>${k.jumlah_hari}h</td>
+      <td><span class="badge ${k.status}">${k.status==='diluluskan'?'Diluluskan':k.status==='ditolak'?'Ditolak':'Menunggu'}</span></td>
+      <td>
+        ${k.status==='menunggu'
+          ? `<button class="btn-sm btn-lulus" onclick="ubahStatus('${k.id}','diluluskan')">✅ Lulus</button>
+             <button class="btn-sm btn-tolak" style="margin-top:4px" onclick="ubahStatus('${k.id}','ditolak')">❌ Tolak</button>`
+          : `<button class="btn-sm" style="background:#f1f5f9;color:#64748b;border-color:#e2e8f0" onclick="ubahStatus('${k.id}','menunggu')">↩ Reset</button>`
+        }
+      </td>
+    </tr>`;
+  }).join('')
+  : `<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Tiada rekod untuk paparan ini.</td></tr>`;
+}
+
+function ubahStatus(id, status) {
+  const k = kursusData.find(k => k.id === id);
+  if (k) {
+    k.status = status;
+    showToast(status === 'diluluskan' ? '✅ Kursus berjaya diluluskan!' : status === 'ditolak' ? '❌ Kursus ditolak.' : '↩ Status dikembalikan ke Menunggu.');
+    renderSemak();
+  }
+}
+
+// ═══════════════════════════════════════
+// URUS STAF
+// ═══════════════════════════════════════
+function renderStaf() {
+  document.getElementById('tbodyStaf').innerHTML = stafData.map(s => `
+    <tr>
+      <td>${s.no_pekerja}</td>
+      <td>${s.nama}</td>
+      <td>${s.jabatan}</td>
+      <td>${formatDate(s.tarikh_masuk)}</td>
+      <td><span class="badge ${s.aktif?'aktif':'nyahaktif'}">${s.aktif?'Aktif':'Tidak Aktif'}</span></td>
+      <td><button class="btn-sm ${s.aktif?'btn-tolak':'btn-lulus'}" onclick="toggleAktif('${s.id}')">${s.aktif?'Nyahaktif':'Aktifkan'}</button></td>
+    </tr>`).join('');
+}
+
+function toggleFormStaf() {
+  const f = document.getElementById('formStaf');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function submitStaf() {
+  const nama = document.getElementById('sNama').value.trim();
+  const no = document.getElementById('sNoPekerja').value.trim();
+  const jab = document.getElementById('sJabatan').value;
+  if (!nama || !no) { showToast('⚠️ Sila isi nama dan no. pekerja.'); return; }
+
+  stafData.push({
+    id: 's' + Date.now(),
+    no_pekerja: no,
+    nama,
+    jabatan: jab,
+    emel: document.getElementById('sEmel').value,
+    tarikh_masuk: document.getElementById('sTarikh').value || new Date().toISOString().split('T')[0],
+    aktif: true,
+  });
+
+  ['sNoPekerja','sNama','sEmel','sPass','sTarikh'].forEach(id => document.getElementById(id).value = '');
+  toggleFormStaf();
+  showToast('✅ Staf ' + nama + ' berjaya didaftarkan!');
+  renderStaf();
+}
+
+function toggleAktif(id) {
+  const s = stafData.find(s => s.id === id);
+  if (s) {
+    s.aktif = !s.aktif;
+    showToast(s.aktif ? `✅ Akaun ${s.nama} diaktifkan.` : `Akaun ${s.nama} dinyahaktifkan.`);
+    renderStaf();
+  }
+}
+</script>
+</body>
+</html>
